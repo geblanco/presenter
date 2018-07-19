@@ -78,7 +78,20 @@ work() {
   done
 }
 
-zathura_pids=$(pgrep zathura | tr '\n' ' ')
+if [[ "$#" -lt 2 ]]; then
+  echo "Usage presenter.sh <slides.pdf> <notes.pdf>"
+  exit 0
+fi
+
+slides=$1; shift;
+notes=$1; shift;
+
+zathura $slides &
+slides_pid=$!
+zathura $notes &
+notes_pid=$!
+zathura_pids=("$slides_pid" "$notes_pid")
+
 for pid in ${zathura_pids[@]}; do
   echo "> Acquired pid $pid"
 done
