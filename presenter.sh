@@ -10,6 +10,9 @@ prop_value=""
 
 grab_user() {
   #clear
+  if [ "$win_id" != "" ]; then
+    wmctrl -i -a $win_id
+  fi
   echo -n "> Awaiting "
   read -n 1 input
   echo ""
@@ -79,17 +82,35 @@ work() {
 }
 
 if [[ "$#" -lt 2 ]]; then
-  echo "Usage presenter.sh <slides.pdf> <notes.pdf>"
+  echo "Usage presenter.sh [<slides.pdf> | <slides_pid>], [<notes.pdf>, | <notes_pid>]"
   exit 0
 fi
 
 slides=$1; shift;
 notes=$1; shift;
+win_id=""
 
-zathura $slides &
-slides_pid=$!
-zathura $notes &
-notes_pid=$!
+if [[ -f $slides ]]; then
+  zathura $slides &
+  slides_pid=$!
+else
+  slides_pid=$slides
+fi
+
+if [[ -f $notes ]]; then
+  zathura $notes &
+  notes_pid=$!
+else
+  notes_pid=$notes
+fi
+
+if hash wmctrl; then
+  win_id=$(wmctrl -l | grep 'presenter' | cut -d ' ' -f1 | head -n 1 | tail -n 1)
+  echo "Found presenter window id ${win_id} $(wmctrl -l | grep 'presenter' | cut -d ' ' -f1 | head -n 1 | tail -n 1)"
+else
+  echo "Install wmctrl to regain focus on page scroll"
+fi
+
 zathura_pids=("$slides_pid" "$notes_pid")
 
 for pid in ${zathura_pids[@]}; do
