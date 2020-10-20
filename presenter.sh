@@ -7,16 +7,17 @@ max_page=0
 page_num_prop="pagenumber"
 num_of_pages_prop="numberofpages"
 prop_value=""
+win_id=""
+close_all=0
 
 grab_user() {
-  #clear
   if [ "$win_id" == "" ]; then
     setup_win_id
   fi
   if [ "$win_id" != "" ]; then
     wmctrl -i -a $win_id
   fi
-  echo -n "> Awaiting "
+  echo -n "> Awaiting: "
   read -n 1 input
   echo ""
 }
@@ -89,6 +90,16 @@ work() {
   done
 }
 
+print_help() {
+  echo "commands:"
+  echo "  j/J: go down"
+  echo "  k/K: go up"
+  echo "  g: go to first page"
+  echo "  G: go to last page"
+  echo "  q/Q: quit"
+  echo "  x/X: quit and close pdf viewers"
+}
+
 if [[ "$#" -lt 2 ]]; then
   echo "Usage presenter.sh [<slides.pdf> | <slides_pid>], [<notes.pdf>, | <notes_pid>]"
   exit 0
@@ -96,7 +107,6 @@ fi
 
 slides=$1; shift;
 notes=$1; shift;
-win_id=""
 
 if [[ -f $slides ]]; then
   zathura $slides &
@@ -122,6 +132,10 @@ fi
 zathura_pids=("$slides_pid" "$notes_pid")
 
 for pid in ${zathura_pids[@]}; do
+  if [[ $(ps -e | cut -d ' ' -f 1 | grep "$pid" | wc -l) -eq 0 ]]; then
+    echo "PID '$pid' not found, exit"
+    exit 1
+  fi
   echo "> Acquired pid $pid"
 done
 
@@ -135,28 +149,14 @@ grab_user
 while [[ $cont -eq 1 ]]; do
   dir=0
   case $input in
-    [j,J])
-      # go down
-      dir=1
-      ;;
-    [k,K])
-      # go up
-      dir=-1
-      ;;
-    g)
-      # first page
-      dir=-2
-      ;;
-    G)
-      # last page
-      dir=2
-      ;;
-    [q,Q])
-      cont=0
-      ;;
-    *)
-      dir=0
-      ;;
+    [j,J]) dir=1 ;;
+    [k,K]) dir=-1 ;;
+    g) dir=-2 ;;
+    G) dir=2 ;;
+    [q,Q]) cont=0 ;;
+    [x,X]) cont=0; close_all=1 ;;
+    [h/H]) print_help ;&
+    *) dir=0 ;;
   esac
   if [[ $cont -eq 1 ]]; then
     if [[ $dir -ne 0 ]]; then
@@ -164,4 +164,11 @@ while [[ $cont -eq 1 ]]; do
     fi
     grab_user
   fi
+  if [[ $close_all -eq 1 ]]; then
+    echo "> Closing documents..."
+    for pid in ${zathura_pids[@]}; do
+      kill $pid
+    done
+  fi
 done
+echo "> Exit"
