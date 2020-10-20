@@ -10,6 +10,9 @@ prop_value=""
 
 grab_user() {
   #clear
+  if [ "$win_id" == "" ]; then
+    setup_win_id
+  fi
   if [ "$win_id" != "" ]; then
     wmctrl -i -a $win_id
   fi
@@ -62,6 +65,10 @@ setup_start_page() {
   curr_page=$min_page
 }
 
+setup_win_id() {
+  win_id=$(wmctrl -l | grep 'presenter' | cut -d ' ' -f1 | head -n 1 | tail -n 1)
+}
+
 work() {
   local direction=$1
   if [[ $direction -gt -2 && $direction -lt 2 ]]; then
@@ -73,6 +80,7 @@ work() {
     # go to start
     curr_page=0
   else
+    # go to end
     curr_page=$max_page
   fi
   echo "> Go to page $curr_page"
@@ -105,8 +113,8 @@ else
 fi
 
 if hash wmctrl; then
-  win_id=$(wmctrl -l | grep 'presenter' | cut -d ' ' -f1 | head -n 1 | tail -n 1)
-  echo "Found presenter window id ${win_id} $(wmctrl -l | grep 'presenter' | cut -d ' ' -f1 | head -n 1 | tail -n 1)"
+  setup_win_id
+  echo "Found presenter window id ${win_id}"
 else
   echo "Install wmctrl to regain focus on page scroll"
 fi
@@ -116,6 +124,9 @@ zathura_pids=("$slides_pid" "$notes_pid")
 for pid in ${zathura_pids[@]}; do
   echo "> Acquired pid $pid"
 done
+
+# give time to dbus to index everything
+sleep 1s
 
 setup_max_page
 echo "> Maximum pages $max_page"
